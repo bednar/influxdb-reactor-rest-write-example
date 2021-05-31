@@ -2,6 +2,7 @@
 
 
 How to start:
-
-- ``
-- http://localhost:8080/writeDemoData
+                      
+- `influxdb-restart.sh`
+- `mvn spring-boot:run`
+- open http://localhost:8080/writeDemoData
