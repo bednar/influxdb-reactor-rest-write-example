@@ -35,8 +35,8 @@ public class WriterController {
     private static final String BUCKET = "my-bucket";
     private static final String ORG = "my-org";
     private static final WritePrecision PRECISION = WritePrecision.MS;
-    public static final int MAX_RETRY_ATTEMPS = 3;
-    public static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(100);
+    private static final int MAX_RETRY_ATTEMPS = 3;
+    private static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(100);
 
     private final WriteApiBlocking writeClient;
 
