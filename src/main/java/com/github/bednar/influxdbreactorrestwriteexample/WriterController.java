@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.RetryBackoffSpec;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +35,8 @@ public class WriterController {
     private static final String BUCKET = "my-bucket";
     private static final String ORG = "my-org";
     private static final WritePrecision PRECISION = WritePrecision.MS;
+    public static final int MAX_RETRY_ATTEMPS = 3;
+    public static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(100);
 
     private final WriteApiBlocking writeClient;
 
@@ -62,6 +66,9 @@ public class WriterController {
                             logger.info("Wrote {} points to bucket {} for observer {} with tags {}", records.size(), BUCKET, observerId, tags);
                         })
                 )
+                .retryWhen(RetryBackoffSpec
+                        .backoff(MAX_RETRY_ATTEMPS, MIN_BACKOFF_TIME)
+                        .doAfterRetry(retrySignal -> logger.info("Retry due the exception: {}", retrySignal.failure().getMessage())))
                 .then();
     }
 
