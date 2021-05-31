@@ -31,11 +31,13 @@ public class WriterController {
 
     private static final Logger logger = LoggerFactory.getLogger(WriterController.class);
 
-    private static final int WRITE_BATCH_SIZE = 2;
     private static final String BUCKET = "my-bucket";
     private static final String ORG = "my-org";
+
     private static final WritePrecision PRECISION = WritePrecision.MS;
-    private static final int MAX_RETRY_ATTEMPS = 3;
+    private static final int WRITE_BATCH_SIZE = 2;
+
+    private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(100);
 
     private final WriteApiBlocking writeClient;
@@ -67,7 +69,7 @@ public class WriterController {
                         })
                 )
                 .retryWhen(RetryBackoffSpec
-                        .backoff(MAX_RETRY_ATTEMPS, MIN_BACKOFF_TIME)
+                        .backoff(MAX_RETRY_ATTEMPTS, MIN_BACKOFF_TIME)
                         .doAfterRetry(retrySignal -> logger.info("Retry due the exception: {}", retrySignal.failure().getMessage())))
                 .then();
     }
