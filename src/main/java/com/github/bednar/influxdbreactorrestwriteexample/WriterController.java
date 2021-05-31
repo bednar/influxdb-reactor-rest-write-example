@@ -47,18 +47,18 @@ public class WriterController {
         Table<Instant, String, Double> values = values();
 
         return Flux.fromIterable(values.rowMap().entrySet())
-                // create Points
+                // create Point
                 .map(cell -> Point.measurement(observerId)
                         .addTags(serializeTags(tags))
                         .time(cell.getKey(), PRECISION)
                         .addFields(Collections.unmodifiableMap(cell.getValue()))
                         .toLineProtocol())
-                // batch by size
+                // create Batch
                 .buffer(WRITE_BATCH_SIZE)
-                // write batch
+                // write Batch
                 .flatMap(records -> Mono
                         .fromRunnable(() -> {
-                            writeClient.writeRecords(BUCKET, ORG, WritePrecision.MS, records);
+                            writeClient.writeRecords(BUCKET, ORG, PRECISION, records);
                             logger.info("Wrote {} points to bucket {} for observer {} with tags {}", records.size(), BUCKET, observerId, tags);
                         })
                 )
@@ -83,6 +83,7 @@ public class WriterController {
 
         Instant now = Instant.now();
         Table<Instant, String, Double> table = HashBasedTable.create();
+        
         // record 1
         table.put(now, "field-a", 30D);
         table.put(now, "field-b", 30D);
