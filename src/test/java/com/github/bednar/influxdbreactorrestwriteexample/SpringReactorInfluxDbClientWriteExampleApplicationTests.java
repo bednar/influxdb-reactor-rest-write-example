@@ -39,7 +39,7 @@ class SpringReactorInfluxDbClientWriteExampleApplicationTests {
 				});
 			});
 		}
-		sleep(5000);
+		sleep(10000);
 		executor.shutdownNow();
 		Assertions.assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
 	}
