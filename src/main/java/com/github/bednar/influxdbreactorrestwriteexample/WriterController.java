@@ -31,23 +31,24 @@ public class WriterController {
 
     private static final Logger logger = LoggerFactory.getLogger(WriterController.class);
 
-    private static final int WRITE_BATCH_SIZE = 2;
     private static final String BUCKET = "my-bucket";
     private static final String ORG = "my-org";
+
     private static final WritePrecision PRECISION = WritePrecision.MS;
-    public static final int MAX_RETRY_ATTEMPTS = 3;
-    public static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(1000);
+    private static final int WRITE_BATCH_SIZE = 2;
+
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(1000);
 
     private final WriteApiBlocking writeClient;
-	private final String observerId;
 
-	public WriterController(InfluxDBClient influxDBClient) {
+    public WriterController(InfluxDBClient influxDBClient) {
         this.writeClient = influxDBClient.getWriteApiBlocking();
-        this.observerId = UUID.randomUUID().toString();
     }
 
     @GetMapping("/writeDemoData")
     Mono<Void> writeDemoData() {
+        String observerId = observerId();
         Map<String, Object> tags = tags();
         Table<Instant, String, Double> values = values();
 
@@ -69,8 +70,13 @@ public class WriterController {
                 )
                 .retryWhen(RetryBackoffSpec
                         .backoff(MAX_RETRY_ATTEMPTS, MIN_BACKOFF_TIME)
-                        .doAfterRetry(retrySignal -> logger.info("Retry: {} due the exception: {}", retrySignal.totalRetries(), retrySignal.failure().getMessage())))
+                        .doAfterRetry(retrySignal -> logger.info("Retry due the exception: {}", retrySignal.failure().getMessage())))
                 .then();
+    }
+
+    @NonNull
+    private String observerId() {
+        return UUID.randomUUID().toString();
     }
 
     @NonNull
@@ -86,7 +92,7 @@ public class WriterController {
 
         Instant now = Instant.now();
         Table<Instant, String, Double> table = HashBasedTable.create();
-
+        
         // record 1
         table.put(now, "field-a", 30D);
         table.put(now, "field-b", 30D);
