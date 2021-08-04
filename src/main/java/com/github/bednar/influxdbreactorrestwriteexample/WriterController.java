@@ -39,17 +39,16 @@ public class WriterController {
         Map<String, Object> tags = tags();
         Table<Instant, String, Double> values = values();
 
-        Flux<Point> points = Flux
+        return Flux
                 .fromIterable(values.rowMap().entrySet())
                 // create Point
                 .map(cell -> Point.measurement(observerId)
                         .addTags(serializeTags(tags))
                         .time(cell.getKey(), PRECISION)
                         .addFields(Collections.unmodifiableMap(cell.getValue()))
-                );
-
-        return Flux
-                .from(writeClient.writePoints(PRECISION, points))
+                )
+                // call Client
+                .as(upstream -> Mono.from(writeClient.writePoints(PRECISION, upstream)))
                 .then();
     }
 
