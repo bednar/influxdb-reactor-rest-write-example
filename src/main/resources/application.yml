@@ -7,3 +7,10 @@ influx:
   readTimeout: 5s # Read timeout for OkHttpClient. (Default: 10s)
   writeTimeout: 5s # Write timeout for OkHttpClient. (Default: 10s)
   connectTimeout: 5s # Connection timeout for OkHttpClient. (Default: 10s)
+management:
+  metrics:
+    export:
+      influx:
+        bucket: my-bucket
+        org: my-org
+        token: my-token
