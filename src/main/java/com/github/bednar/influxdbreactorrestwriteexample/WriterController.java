@@ -2,20 +2,16 @@ package com.github.bednar.influxdbreactorrestwriteexample;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.influxdb.client.InfluxDBClient;
-import com.influxdb.client.WriteApiBlocking;
 import com.influxdb.client.domain.WritePrecision;
+import com.influxdb.client.reactive.InfluxDBClientReactive;
+import com.influxdb.client.reactive.WriteReactiveApi;
 import com.influxdb.client.write.Point;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.retry.RetryBackoffSpec;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,21 +25,12 @@ import java.util.stream.Collectors;
 @RestController
 public class WriterController {
 
-    private static final Logger logger = LoggerFactory.getLogger(WriterController.class);
-
-    private static final String BUCKET = "my-bucket";
-    private static final String ORG = "my-org";
-
     private static final WritePrecision PRECISION = WritePrecision.MS;
-    private static final int WRITE_BATCH_SIZE = 2;
 
-    private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final Duration MIN_BACKOFF_TIME = Duration.ofMillis(1000);
+    private final WriteReactiveApi writeClient;
 
-    private final WriteApiBlocking writeClient;
-
-    public WriterController(InfluxDBClient influxDBClient) {
-        this.writeClient = influxDBClient.getWriteApiBlocking();
+    public WriterController(InfluxDBClientReactive influxDBClient) {
+        this.writeClient = influxDBClient.getWriteReactiveApi();
     }
 
     @GetMapping("/writeDemoData")
@@ -52,25 +39,17 @@ public class WriterController {
         Map<String, Object> tags = tags();
         Table<Instant, String, Double> values = values();
 
-        return Flux.fromIterable(values.rowMap().entrySet())
+        Flux<Point> points = Flux
+                .fromIterable(values.rowMap().entrySet())
                 // create Point
                 .map(cell -> Point.measurement(observerId)
                         .addTags(serializeTags(tags))
                         .time(cell.getKey(), PRECISION)
                         .addFields(Collections.unmodifiableMap(cell.getValue()))
-                        .toLineProtocol())
-                // create Batch
-                .buffer(WRITE_BATCH_SIZE)
-                // write Batch
-                .flatMap(records -> Mono
-                        .fromRunnable(() -> {
-                            writeClient.writeRecords(BUCKET, ORG, PRECISION, records);
-                            logger.info("Wrote {} points to bucket {} for observer {} with tags {}", records.size(), BUCKET, observerId, tags);
-                        })
-                )
-                .retryWhen(RetryBackoffSpec
-                        .backoff(MAX_RETRY_ATTEMPTS, MIN_BACKOFF_TIME)
-                        .doAfterRetry(retrySignal -> logger.info("Retry due the exception: {}", retrySignal.failure().getMessage())))
+                );
+
+        return Flux
+                .from(writeClient.writePoints(PRECISION, points))
                 .then();
     }
 
@@ -92,7 +71,7 @@ public class WriterController {
 
         Instant now = Instant.now();
         Table<Instant, String, Double> table = HashBasedTable.create();
-        
+
         // record 1
         table.put(now, "field-a", 30D);
         table.put(now, "field-b", 30D);
