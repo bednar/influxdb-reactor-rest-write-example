@@ -47,8 +47,9 @@ public class WriterController {
                         .time(cell.getKey(), PRECISION)
                         .addFields(Collections.unmodifiableMap(cell.getValue()))
                 )
+                .as(upstream -> Flux.from(writeClient.writePoints(PRECISION, upstream)))
                 // call Client
-                .as(upstream -> Mono.from(writeClient.writePoints(PRECISION, upstream)))
+                .reduce((success1, success2) -> success1)
                 .then();
     }
 

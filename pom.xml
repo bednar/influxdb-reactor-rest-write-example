@@ -15,7 +15,7 @@
 	<description>The example how to write data with Reactor and InfluxDB client</description>
 	<properties>
 		<java.version>1.8</java.version>
-		<influxdb-client.version>3.2.0-SNAPSHOT</influxdb-client.version>
+		<influxdb-client.version>4.0.0.reactive.preview-SNAPSHOT</influxdb-client.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -69,5 +69,18 @@
 			</plugin>
 		</plugins>
 	</build>
+
+    <repositories>
+        <repository>
+            <id>snapshots-repo</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
 </project>
