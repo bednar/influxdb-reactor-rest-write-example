@@ -111,7 +111,7 @@ class SpringReactorInfluxDbClientWriteExampleApplicationTests {
         // count how many observations the db sees
         Long count = Mono.fromCallable(() ->
                 "from(bucket: \"" + BUCKET + "\")\n" +
-                        "  |> range(start: 2021-06-01, stop: 2021-09-09)\n" +
+                        "  |> range(start: 0)\n" +
                         "  |> filter(fn: (r) => r[\"_measurement\"] == \"" + observer + "\")\n" +
                         "  |> filter(fn: (r) => r[\"_field\"] == \"a\")\n" +
                         "  |> count()\n" +
