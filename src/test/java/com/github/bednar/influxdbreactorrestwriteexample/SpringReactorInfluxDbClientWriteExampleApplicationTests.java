@@ -9,18 +9,22 @@ import com.influxdb.client.reactive.InfluxDBClientReactive;
 import com.influxdb.client.reactive.InfluxDBClientReactiveFactory;
 import com.influxdb.client.reactive.WriteOptionsReactive;
 import com.influxdb.client.write.Point;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.lang.NonNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -59,7 +63,40 @@ class SpringReactorInfluxDbClientWriteExampleApplicationTests {
 		Assertions.assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
 	}
 
-    private static final String BUCKET = "my-bucket";
+	@Test
+	void writeSuccessPassData(@Autowired InfluxDBClientReactive client,
+							  @Autowired WriterController writerController) {
+
+		int rows_count = 10_000;
+		int columns_count = 20;
+		int tags_count = 10;
+		String measurement = "testObserver_" + System.currentTimeMillis();
+
+		// prepare data
+		Table<Instant, String, Double> out = generateData(rows_count, columns_count);
+		Map<String, Object> tags = generateTags(tags_count);
+
+		// write data
+		writerController
+				.writeDemoData(measurement, tags, out)
+				.block();
+
+		// prepare query
+		String query = String.format("from(bucket: \"%s\")\n" +
+				"|> range(start: 0)\n" +
+				"|> filter(fn: (r) => r[\"_measurement\"] == \"%s\")\n" +
+				"|> count()", BUCKET, measurement);
+
+		Long calculatedCount = Mono.just(query)
+				.flatMapMany(it -> client.getQueryReactiveApi().query(it))
+				.mapNotNull(fluxRecord -> (Long) fluxRecord.getValue())
+				.reduce(Long::sum)
+				.block();
+
+		assertEquals(rows_count * columns_count, calculatedCount);
+	}
+
+	private static final String BUCKET = "my-bucket";
     private static final String URL = "http://localhost:8086";
     private static final String TOKEN = "my-token";
     private static final String ORG = "my-org";
@@ -91,7 +128,7 @@ class SpringReactorInfluxDbClientWriteExampleApplicationTests {
         }
 
 
-        // ~~~~~~~~~~~~~~~~~~~ WRITE POINTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// ~~~~~~~~~~~~~~~~~~~ WRITE POINTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Write 2 batches worth of data at once using writePoints
         Flux.fromIterable(out.rowMap().entrySet())
                 // generate the points going to the writePoints
@@ -125,4 +162,25 @@ class SpringReactorInfluxDbClientWriteExampleApplicationTests {
         // the number written to the db should equal the
         assertEquals(WRITE_BATCH_SIZE * iterations, count);
     }
+
+	@NotNull
+	private Table<Instant, String, Double> generateData(int rows, int columns) {
+		Instant now = Instant.now();
+		Table<Instant, String, Double> out = HashBasedTable.create(rows, 1);
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < columns; j++) {
+				out.put(now.minusMillis(i + 1), "col-" + j, ThreadLocalRandom.current().nextDouble(0.0, 10.0));
+			}
+		}
+		return out;
+	}
+
+	@NonNull
+	private Map<String, Object> generateTags(int count) {
+		Map<String, Object> tags = new HashMap<>();
+		for (int i = 0; i < count; i++) {
+			tags.put("tag-" + i, i);
+		}
+		return tags;
+	}
 }

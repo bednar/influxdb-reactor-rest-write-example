@@ -39,6 +39,11 @@ public class WriterController {
         Map<String, Object> tags = tags();
         Table<Instant, String, Double> values = values();
 
+        return writeDemoData(observerId, tags, values);
+    }
+
+    @NonNull
+    Mono<Void> writeDemoData(String observerId, Map<String, Object> tags, Table<Instant, String, Double> values) {
         return Flux
                 .fromIterable(values.rowMap().entrySet())
                 // create Point
